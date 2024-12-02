@@ -6,7 +6,10 @@ import {
   optimism,
   polygon,
   sepolia,
+  anvil
 } from 'wagmi/chains';
+
+
 
 export const config = getDefaultConfig({
   appName: 'RainbowKit App',
@@ -17,6 +20,7 @@ export const config = getDefaultConfig({
     optimism,
     arbitrum,
     base,
+    anvil,
     ...(process.env.NEXT_PUBLIC_ENABLE_TESTNETS === 'true' ? [sepolia] : []),
   ],
   ssr: true,
