@@ -1,0 +1,1 @@
+export const BONDING_CURVE_FACTORY_ADDRESS = "0x49b8e3b089d4ebf9f37b1da9b839ec013c2cd8c9";

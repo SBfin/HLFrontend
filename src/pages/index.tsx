@@ -1,9 +1,19 @@
+import { useState } from 'react';
+import { useWriteContract, useTransaction } from 'wagmi';
+import { BONDING_CURVE_FACTORY_ADDRESS } from '../constants'; // You'll need to create this
+import { abi } from '../abi/BondingCurveFactory';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import styles from '../styles/Home.module.css';
 
 const Home: NextPage = () => {
+  const [tokenName, setTokenName] = useState('');
+  const [tokenSymbol, setTokenSymbol] = useState('');
+
+  const { writeContract } = useWriteContract()
+
+
   return (
     <div className={styles.container}>
       <Head>
@@ -25,6 +35,46 @@ const Home: NextPage = () => {
 
         <section className={styles.getStarted}>
           <p>Get started by launching a new token</p>
+          
+          <div className={styles.inputContainer}>
+            <div className={styles.inputGroup}>
+              <label htmlFor="tokenName">Token Name</label>
+              <input
+                id="tokenName"
+                type="text"
+                placeholder="Enter token name"
+                value={tokenName}
+                onChange={(e) => setTokenName(e.target.value)}
+                className={styles.input}
+              />
+            </div>
+            
+            <div className={styles.inputGroup}>
+              <label htmlFor="tokenSymbol">Token Symbol</label>
+              <input
+                id="tokenSymbol"
+                type="text"
+                placeholder="Enter token symbol"
+                value={tokenSymbol}
+                onChange={(e) => setTokenSymbol(e.target.value)}
+                className={styles.input}
+              />
+            </div>
+          </div>
+          
+          <button 
+            onClick={() => 
+              writeContract({ 
+                abi,
+                address: '0x6b175474e89094c44da98b954eedeac495271d0f',
+                functionName: 'createToken',
+                args: [tokenName, tokenSymbol],
+              })
+            }
+            className={`${styles.createButton} ${styles.launchButton}`}
+          >
+            Launch Token
+          </button>
         </section>
       </main>
 
