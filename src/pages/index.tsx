@@ -1,18 +1,32 @@
-import { useState } from 'react';
-import { useWriteContract, useTransaction } from 'wagmi';
+import { useState, useEffect } from 'react';
+import { useWriteContract, useTransaction, useConfig } from 'wagmi';
 import { BONDING_CURVE_FACTORY_ADDRESS } from '../constants'; // You'll need to create this
-import { abi } from '../abi/BondingCurveFactory';
+import { abiBondingCurveFactory } from '../abi/BondingCurveFactory';
+import { abiBondingCurveToken } from '../abi/BondingCurveToken';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import styles from '../styles/Home.module.css';
+import { getTransactionReceipt } from '@wagmi/core';
 
 const Home: NextPage = () => {
+  const config = useConfig();
   const [tokenName, setTokenName] = useState('');
   const [tokenSymbol, setTokenSymbol] = useState('');
 
-  const { writeContract } = useWriteContract()
+  const { data: hash, writeContract } = useWriteContract();
 
+  useEffect(() => {
+    const getReceipt = async () => {
+      if (hash) {
+        console.log('Transaction hash:', hash);
+        const receipt = await getTransactionReceipt(config, { hash });
+        console.log('Transaction receipt:', receipt);
+      }
+    };
+    
+    getReceipt();
+  }, [hash]);
 
   return (
     <div className={styles.container}>
@@ -63,14 +77,19 @@ const Home: NextPage = () => {
           </div>
           
           <button 
-            onClick={() => 
-              writeContract({ 
-                abi,
-                address: '0x6b175474e89094c44da98b954eedeac495271d0f',
-                functionName: 'createToken',
-                args: [tokenName, tokenSymbol],
-              })
-            }
+            onClick={async () => {
+              try {
+                await writeContract({ 
+                  abi: abiBondingCurveFactory,
+                  address: BONDING_CURVE_FACTORY_ADDRESS,
+                  functionName: 'createToken',
+                  args: [tokenName, tokenSymbol]
+                });
+              } catch (error: any) {
+                console.error('Detailed error:', error);
+                // Often the revert reason is in error.cause or error.message
+              }
+            }}
             className={`${styles.createButton} ${styles.launchButton}`}
           >
             Launch Token
