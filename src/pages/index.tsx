@@ -45,34 +45,48 @@ const Home: NextPage = () => {
   useEffect(() => {
     const getReceipt = async () => {
       if (hash) {
-        const receipt = await getTransactionReceipt(config, { hash });
         const eventSignature = getEventSignature('TokenCreated', abiBondingCurveFactory);
-        console.log('eventSignature', eventSignature);
         const filter = {
           address: BONDING_CURVE_FACTORY_ADDRESS,
-          topics: [
-              ethers.id(eventSignature),
-          ],
+          topics: [ethers.id(eventSignature)],
+          fromBlock: BigInt(0),
+          toBlock: 'latest'
         };
 
-        const result = await provider?.getLogs(filter as any)
-        console.log('result logs', result);
+        try {
+          const logs = await provider?.getLogs(filter as any);
+          if (!logs) return;
 
-        const contractInterface = new ethers.Interface(abiBondingCurveFactory);
-
-        result?.forEach((log, idx) => {
-            const decodedLog = contractInterface.decodeEventLog('TokenCreated', log.data, log.topics);
-            console.log('creator:      ', decodedLog.creator.toString())
-            console.log('tokenAddress:   ', decodedLog.tokenAddress.toString())
-            console.log('hookAddress:     ', decodedLog.hookAddress.toString())
-            console.log('name:     ', decodedLog.name.toString())
-            console.log('symbol:     ', decodedLog.symbol.toString())
+          const contractInterface = new ethers.Interface(abiBondingCurveFactory);
+          
+          const newTokens = logs.map(log => {
+            const decodedLog = contractInterface.decodeEventLog(
+              'TokenCreated',
+              log.data,
+              log.topics
+            );
+            
+            return {
+              creator: decodedLog.creator.toString(),
+              tokenAddress: decodedLog.tokenAddress.toString(),
+              hookAddress: decodedLog.hookAddress.toString(),
+              name: decodedLog.name.toString(),
+              symbol: decodedLog.symbol.toString(),
+            };
           });
+
+          setCreatedTokens(newTokens);
+        } catch (error) {
+          console.error('Error processing logs:', error);
+        }
       }
     };
     getReceipt();
-  }, [hash]);
+  }, [hash, provider]);
 
+  const formatAddress = (address: string) => {
+    return `${address.slice(0, 4)}...${address.slice(-3)}`;
+  };
 
   return (
     <div className={styles.container}>
@@ -88,14 +102,12 @@ const Home: NextPage = () => {
       <main className={styles.main}>
         <div className={styles.header}>
           <h1 className={styles.title}>
-            Welcome to <span className={styles.highlight}>PumpClone</span>
+            brain.fun
           </h1>
           <ConnectButton />
         </div>
 
         <section className={styles.getStarted}>
-          <p>Get started by launching a new token</p>
-          
           <div className={styles.inputContainer}>
             <div className={styles.inputGroup}>
               <label htmlFor="tokenName">Token Name</label>
@@ -122,7 +134,7 @@ const Home: NextPage = () => {
             </div>
           </div>
           
-          <button 
+          <button className={styles.launchButton}
             onClick={async () => {
               console.log('Button clicked');
               // Option 3: Use token parameters to create a unique salt
@@ -176,13 +188,38 @@ const Home: NextPage = () => {
             Launch Token
           </button>
         </section>
-      </main>
 
-      <footer className={styles.footer}>
-        <a href="https://rainbow.me" rel="noopener noreferrer" target="_blank">
-          Made with ❤️ by your frens at 🌈
-        </a>
-      </footer>
+        <section className={styles.tokenTable}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Symbol</th>
+                <th>Token Address</th>
+                <th>Hook Address</th>
+                <th>Price</th>
+                <th>Market Cap</th>
+                <th>Revenues</th>
+                <th>Trade</th>
+              </tr>
+            </thead>
+            <tbody>
+              {createdTokens.map((token, index) => (
+                <tr key={index}>
+                  <td>{token.name}</td>
+                  <td>{token.symbol}</td>
+                  <td>{formatAddress(token.tokenAddress)}</td>
+                  <td>{formatAddress(token.hookAddress)}</td>
+                  <td></td> {/* Price */}
+                  <td></td> {/* Market Cap */}
+                  <td></td> {/* Revenues */}
+                  <td></td> {/* Trade Button */}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      </main>
     </div>
   );
 };
