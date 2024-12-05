@@ -11,26 +11,68 @@ import { getTransactionReceipt } from '@wagmi/core';
 import { simulateContract } from '@wagmi/core';
 import { type SimulateContractParameters } from '@wagmi/core'
 import { ethers } from 'ethers';
-import { useWatchContractEvent } from 'wagmi';
 import { BaseError, ContractFunctionRevertedError } from 'viem';
+import { usePublicClient } from 'wagmi';
+
+// Define a type for the token object
+type Token = {
+  creator: string;
+  tokenAddress: string;
+  hookAddress: string;
+  name: string;
+  symbol: string;
+};
 
 const Home: NextPage = () => {
   const config = useConfig();
+  const provider = usePublicClient();
   const [tokenName, setTokenName] = useState('');
   const [tokenSymbol, setTokenSymbol] = useState('');
+  const [newTokenAddress, setNewTokenAddress] = useState<string | null>(null);
+  const [createdTokens, setCreatedTokens] = useState<Token[]>([]);
 
   const { data: hash, writeContract } = useWriteContract();
+
+  // ie: -> Flash(address,address,uint256,uint256,uint256,uint256)
+  const getEventSignature = (eventName: string, abi: any) => {
+    const eventAbi = abi.find((entry: any) => entry.name === eventName);
+    const types = eventAbi.inputs.map((input: any) => input.type);
+    return `${eventName}(${types.join(',')})`;
+  }
+
+  
 
   useEffect(() => {
     const getReceipt = async () => {
       if (hash) {
-        console.log('Transaction hash:', hash);
         const receipt = await getTransactionReceipt(config, { hash });
-        console.log('Transaction receipt:', receipt);
+        const eventSignature = getEventSignature('TokenCreated', abiBondingCurveFactory);
+        console.log('eventSignature', eventSignature);
+        const filter = {
+          address: BONDING_CURVE_FACTORY_ADDRESS,
+          topics: [
+              ethers.id(eventSignature),
+          ],
+        };
+
+        const result = await provider?.getLogs(filter as any)
+        console.log('result logs', result);
+
+        const contractInterface = new ethers.Interface(abiBondingCurveFactory);
+
+        result?.forEach((log, idx) => {
+            const decodedLog = contractInterface.decodeEventLog('TokenCreated', log.data, log.topics);
+            console.log('creator:      ', decodedLog.creator.toString())
+            console.log('tokenAddress:   ', decodedLog.tokenAddress.toString())
+            console.log('hookAddress:     ', decodedLog.hookAddress.toString())
+            console.log('name:     ', decodedLog.name.toString())
+            console.log('symbol:     ', decodedLog.symbol.toString())
+          });
       }
     };
     getReceipt();
   }, [hash]);
+
 
   return (
     <div className={styles.container}>
