@@ -11,6 +11,8 @@ import { getTransactionReceipt } from '@wagmi/core';
 import { simulateContract } from '@wagmi/core';
 import { type SimulateContractParameters } from '@wagmi/core'
 import { ethers } from 'ethers';
+import { useWatchContractEvent } from 'wagmi';
+import { BaseError, ContractFunctionRevertedError } from 'viem';
 
 const Home: NextPage = () => {
   const config = useConfig();
@@ -27,7 +29,6 @@ const Home: NextPage = () => {
         console.log('Transaction receipt:', receipt);
       }
     };
-    
     getReceipt();
   }, [hash]);
 
@@ -82,39 +83,50 @@ const Home: NextPage = () => {
           <button 
             onClick={async () => {
               console.log('Button clicked');
-              console.log('abi', abiBondingCurveFactory);
-              console.log('Type of abi:', typeof abiBondingCurveFactory);
+              // Option 3: Use token parameters to create a unique salt
+              // Option 2: Use a random salt
+              const paddedSalt = ethers.zeroPadValue(ethers.randomBytes(32), 32);
+              // log type of paddedSalt
+              console.log('Type of paddedSalt:', typeof paddedSalt);
+              //const paddedSalt = ethers.zeroPadValue(SALT, 32);
+              
+              // Simulate transaction first
               try {
-                const paddedSalt = ethers.zeroPadValue(SALT, 32);
-
                 const result = await simulateContract(config, {
                   abi: abiBondingCurveFactory as SimulateContractParameters['abi'],
                   address: BONDING_CURVE_FACTORY_ADDRESS as `0x${string}`,
                   functionName: 'createToken',
                   args: [
                     tokenName, 
-                    tokenSymbol, 
-                    HOOK_ADDRESS as `0x${string}`,
-                    paddedSalt
+                    tokenSymbol
                   ]
                 } as SimulateContractParameters);
 
                 console.log('Simulation result:', result);
+              } catch (simulationError: any) {
+                console.error('Simulation Error:', simulationError);
+                alert('Transaction simulation failed. Please check the console for more details.');
+                return;
+              }
 
+              // If simulation succeeds, proceed with contract write
+              try {
+                console.log('tokenName', tokenName);
+                console.log('tokenSymbol', tokenSymbol);
+                console.log('HOOK_ADDRESS', HOOK_ADDRESS);
+                console.log('paddedSalt', paddedSalt);
                 await writeContract({
                   abi: abiBondingCurveFactory,
                   address: BONDING_CURVE_FACTORY_ADDRESS,
                   functionName: 'createToken',
                   args: [
                     tokenName, 
-                    tokenSymbol, 
-                    HOOK_ADDRESS,
-                    paddedSalt
+                    tokenSymbol
                   ]
                 });
-              } catch (error: any) {
-                console.error('Error:', error);
-                alert('Transaction failed. Please check the console for more details.');
+              } catch (writeError: any) {
+                console.error('Write Contract Error:', writeError);
+                alert('Failed to write to contract. Please check the console for more details.');
               }
             }}
             className={`${styles.createButton} ${styles.launchButton}`}
