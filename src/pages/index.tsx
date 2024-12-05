@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useWriteContract, useTransaction, useConfig } from 'wagmi';
-import { BONDING_CURVE_FACTORY_ADDRESS } from '../constants'; // You'll need to create this
+import { BONDING_CURVE_FACTORY_ADDRESS, HOOK_ADDRESS, SALT } from '../constants'; // You'll need to create this
 import { abiBondingCurveFactory } from '../abi/BondingCurveFactory';
 import { abiBondingCurveToken } from '../abi/BondingCurveToken';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -8,6 +8,9 @@ import type { NextPage } from 'next';
 import Head from 'next/head';
 import styles from '../styles/Home.module.css';
 import { getTransactionReceipt } from '@wagmi/core';
+import { simulateContract } from '@wagmi/core';
+import { type SimulateContractParameters } from '@wagmi/core'
+import { ethers } from 'ethers';
 
 const Home: NextPage = () => {
   const config = useConfig();
@@ -78,16 +81,40 @@ const Home: NextPage = () => {
           
           <button 
             onClick={async () => {
+              console.log('Button clicked');
+              console.log('abi', abiBondingCurveFactory);
+              console.log('Type of abi:', typeof abiBondingCurveFactory);
               try {
-                await writeContract({ 
+                const paddedSalt = ethers.zeroPadValue(SALT, 32);
+
+                const result = await simulateContract(config, {
+                  abi: abiBondingCurveFactory as SimulateContractParameters['abi'],
+                  address: BONDING_CURVE_FACTORY_ADDRESS as `0x${string}`,
+                  functionName: 'createToken',
+                  args: [
+                    tokenName, 
+                    tokenSymbol, 
+                    HOOK_ADDRESS as `0x${string}`,
+                    paddedSalt
+                  ]
+                } as SimulateContractParameters);
+
+                console.log('Simulation result:', result);
+
+                await writeContract({
                   abi: abiBondingCurveFactory,
                   address: BONDING_CURVE_FACTORY_ADDRESS,
                   functionName: 'createToken',
-                  args: [tokenName, tokenSymbol]
+                  args: [
+                    tokenName, 
+                    tokenSymbol, 
+                    HOOK_ADDRESS,
+                    paddedSalt
+                  ]
                 });
               } catch (error: any) {
-                console.error('Detailed error:', error);
-                // Often the revert reason is in error.cause or error.message
+                console.error('Error:', error);
+                alert('Transaction failed. Please check the console for more details.');
               }
             }}
             className={`${styles.createButton} ${styles.launchButton}`}
