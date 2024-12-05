@@ -30,6 +30,8 @@ const Home: NextPage = () => {
   const [tokenSymbol, setTokenSymbol] = useState('');
   const [newTokenAddress, setNewTokenAddress] = useState<string | null>(null);
   const [createdTokens, setCreatedTokens] = useState<Token[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const tokensPerPage = 5;
 
   const { data: hash, writeContract } = useWriteContract();
 
@@ -87,6 +89,11 @@ const Home: NextPage = () => {
   const formatAddress = (address: string) => {
     return `${address.slice(0, 4)}...${address.slice(-3)}`;
   };
+
+  const indexOfLastToken = currentPage * tokensPerPage;
+  const indexOfFirstToken = indexOfLastToken - tokensPerPage;
+  const currentTokens = createdTokens.slice(indexOfFirstToken, indexOfLastToken);
+  const totalPages = Math.ceil(createdTokens.length / tokensPerPage);
 
   return (
     <div className={styles.container}>
@@ -201,10 +208,11 @@ const Home: NextPage = () => {
                 <th>Market Cap</th>
                 <th>Revenues</th>
                 <th>Trade</th>
+                <th>Agent Txs</th>
               </tr>
             </thead>
             <tbody>
-              {createdTokens.map((token, index) => (
+              {currentTokens.map((token, index) => (
                 <tr key={index}>
                   <td>{token.name}</td>
                   <td>{token.symbol}</td>
@@ -213,12 +221,42 @@ const Home: NextPage = () => {
                   <td></td> {/* Price */}
                   <td></td> {/* Market Cap */}
                   <td></td> {/* Revenues */}
-                  <td></td> {/* Trade Button */}
+                  <td className={styles.actionButtons}>
+                    <button className={`${styles.tradeButton} ${styles.buyButton}`}>
+                      Buy
+                    </button>
+                    <button className={`${styles.tradeButton} ${styles.sellButton}`}>
+                      Sell
+                    </button>
+                  </td>
+                  <td>
+                    {/* Agent Txs content here */}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </section>
+
+        <div className={styles.pagination}>
+          <button 
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className={styles.pageButton}
+          >
+            Previous
+          </button>
+          <span className={styles.pageInfo}>
+            Page {currentPage} of {totalPages}
+          </span>
+          <button 
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className={styles.pageButton}
+          >
+            Next
+          </button>
+        </div>
       </main>
     </div>
   );
